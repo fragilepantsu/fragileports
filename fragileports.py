@@ -15,12 +15,30 @@ def generate_random_string(length=10):
 def handle_client(connection, client_address):
     try:
         logging.info(f'Connection from {client_address[0]}:{client_address[1]}')
-        data = connection.recv(1024).decode('utf-8')
+        
+        data = b''  
+        buffer_size = 1024
+        while True:
+            chunk = connection.recv(buffer_size)
+            if not chunk:
+                break
+            data += chunk  
+            
+            if len(data) > 65536:  
+                logging.error(f"[ERROR] Data size exceeds limit from {client_address[0]}:{client_address[1]}. Disconnecting.")
+                break
+        
         if data:
-            logging.info(f'Incoming RAW request: {data}')
+            decoded_data = data.decode('utf-8', errors='ignore')
+            logging.info(f'Incoming RAW request: {decoded_data}')
+    
+    except Exception as e:
+        logging.error(f"Error handling client {client_address}: {e}")
+    
     finally:
         connection.close()
 
+# Обработка HTTP-запросов
 class DetailedHTTPRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         response_text = generate_random_string()
